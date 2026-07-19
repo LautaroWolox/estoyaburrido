@@ -5,6 +5,7 @@ import Button from 'primevue/button'
 import Drawer from 'primevue/drawer'
 import Avatar from 'primevue/avatar'
 import { navigation } from '@/app/navigation'
+import { useMedicationReminders } from '@/composables/useMedicationReminders'
 import { useAppStore } from '@/stores/app'
 
 const route = useRoute()
@@ -13,6 +14,8 @@ const mobileMenuVisible = ref(false)
 const visibleBottomItems = navigation.slice(0, 5)
 const initials = computed(() => store.data.settings.displayName.trim().slice(0, 2).toUpperCase() || 'VO')
 const isActive = (to: string) => (to === '/' ? route.path === '/' : route.path.startsWith(to))
+
+useMedicationReminders()
 </script>
 
 <template>
