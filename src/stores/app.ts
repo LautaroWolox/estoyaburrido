@@ -1,12 +1,21 @@
 import { computed, onScopeDispose, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
-import type { AppData, CalendarEvent, Expense, Habit, Medication, Routine } from '@/types/domain'
+import type {
+  AppData,
+  CalendarEvent,
+  CardPurchase,
+  Expense,
+  Habit,
+  Medication,
+  Routine,
+  SubeMovement
+} from '@/types/domain'
 import { createId } from '@/utils/id'
 import { monthKey, todayKey } from '@/utils/date'
 import { parseAppData } from '@/utils/appData'
 
-const STORAGE_KEY = 'vida-organizada:v2'
-const LEGACY_KEY = 'vida-organizada:v1'
+const STORAGE_KEY = 'vida-organizada:v3'
+const LEGACY_KEYS = ['vida-organizada:v2', 'vida-organizada:v1']
 
 type CollectionKey = Exclude<keyof AppData, 'settings'>
 type Identifiable = { id: string }
@@ -21,13 +30,25 @@ const defaultData = (): AppData => ({
   savingsGoals: [], installmentPlans: [], tasks: [], focusSessions: [], shoppingLists: [], shoppingItems: [],
   inventoryItems: [], homeTasks: [], maintenanceItems: [], warranties: [], healthProfessionals: [],
   medicalAppointments: [], medicalDocuments: [], vitalRecords: [], symptomLogs: [], emergencyContacts: [],
-  settings: { displayName: 'Lautaro', currency: 'ARS', darkMode: false, notificationsEnabled: false }
+  paymentCards: [], cardPurchases: [], cardStatements: [], subeCards: [], subeMovements: [],
+  settings: {
+    displayName: 'Lautaro',
+    currency: 'ARS',
+    darkMode: false,
+    notificationsEnabled: false,
+    walletHideAmounts: false,
+    walletAutoLockMinutes: 15,
+    walletLockOnBackground: false,
+    walletRequirePassword: true,
+    walletMaskSubeNumber: true
+  }
 })
 
 const loadInitialData = (): AppData => {
   const fallback = defaultData()
   try {
-    const stored = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_KEY)
+    const stored = localStorage.getItem(STORAGE_KEY)
+      ?? LEGACY_KEYS.map((key) => localStorage.getItem(key)).find((value) => value !== null)
     return stored ? parseAppData(JSON.parse(stored), fallback) : fallback
   } catch {
     return fallback
@@ -69,6 +90,11 @@ export const useAppStore = defineStore('app', () => {
   const openTasks = computed(() => data.value.tasks.filter((item) => item.status !== 'done'))
   const lowStockItems = computed(() => data.value.inventoryItems.filter((item) => item.quantity <= item.minStock))
   const lowStockMedications = computed(() => data.value.medications.filter((item) => item.stock !== undefined && item.stockAlert !== undefined && item.stock <= item.stockAlert))
+  const walletCreditLimit = computed(() => data.value.paymentCards.filter((item) => item.type === 'credit' && item.status === 'active').reduce((sum, item) => sum + item.creditLimit, 0))
+  const walletAvailableLimit = computed(() => data.value.paymentCards.filter((item) => item.type === 'credit' && item.status === 'active').reduce((sum, item) => sum + item.availableLimit, 0))
+  const walletCurrentDebt = computed(() => Math.max(0, walletCreditLimit.value - walletAvailableLimit.value))
+  const totalSubeBalance = computed(() => data.value.subeCards.filter((item) => item.active).reduce((sum, item) => sum + item.balance, 0))
+  const lowBalanceSubeCards = computed(() => data.value.subeCards.filter((item) => item.active && item.balance <= item.lowBalanceAlert))
 
   function upsert<T extends Identifiable>(collection: CollectionKey, item: T) {
     const list = data.value[collection] as unknown as Identifiable[]
@@ -121,8 +147,116 @@ export const useAppStore = defineStore('app', () => {
   function upsertCalendarEvent(item: CalendarEvent) { upsert('calendarEvents', item) }
   function removeCalendarEvent(id: string) { remove('calendarEvents', id) }
 
+  function recalculateCardLimit(cardId: string) {
+    const card = data.value.paymentCards.find((item) => item.id === cardId)
+    if (!card || card.type !== 'credit') return
+    const consumed = data.value.cardPurchases
+      .filter((item) => item.cardId === cardId && item.status !== 'refunded')
+      .reduce((sum, item) => sum + item.amount, 0)
+    card.availableLimit = Math.max(0, card.creditLimit - consumed)
+  }
+
+  function recordCardPurchase(purchase: CardPurchase, registerInFinance: boolean) {
+    const previous = data.value.cardPurchases.find((item) => item.id === purchase.id)
+    const financeId = previous?.financeTransactionId ?? purchase.financeTransactionId ?? (registerInFinance ? createId('transaction') : undefined)
+    const saved = { ...purchase, financeTransactionId: financeId }
+    upsert('cardPurchases', saved)
+    recalculateCardLimit(saved.cardId)
+
+    if (registerInFinance && financeId) {
+      const card = data.value.paymentCards.find((item) => item.id === saved.cardId)
+      const installmentAmount = saved.installments > 1 ? saved.amount / saved.installments : saved.amount
+      upsert('transactions', {
+        id: financeId,
+        type: 'expense',
+        title: saved.title,
+        amount: installmentAmount,
+        category: saved.category,
+        date: saved.date,
+        account: card?.account || card?.issuer || 'Billetera',
+        paymentMethod: `${card?.network ?? 'Tarjeta'} •••• ${card?.last4 ?? ''}`.trim(),
+        notes: saved.installments > 1 ? `${saved.currentInstallment}/${saved.installments} cuotas · ${saved.notes}`.trim() : saved.notes,
+        tags: ['billetera', 'tarjeta'],
+        cardId: saved.cardId
+      })
+    }
+  }
+
+  function removeCardPurchase(id: string) {
+    const purchase = data.value.cardPurchases.find((item) => item.id === id)
+    if (!purchase) return
+    if (purchase.financeTransactionId) remove('transactions', purchase.financeTransactionId)
+    remove('cardPurchases', id)
+    recalculateCardLimit(purchase.cardId)
+  }
+
+  function removePaymentCard(id: string) {
+    const transactionIds = data.value.cardPurchases.filter((item) => item.cardId === id).map((item) => item.financeTransactionId).filter((value): value is string => Boolean(value))
+    data.value.transactions = data.value.transactions.filter((item) => !transactionIds.includes(item.id))
+    data.value.cardPurchases = data.value.cardPurchases.filter((item) => item.cardId !== id)
+    data.value.cardStatements = data.value.cardStatements.filter((item) => item.cardId !== id)
+    remove('paymentCards', id)
+  }
+
+  function payCardStatement(statementId: string, amount: number) {
+    const statement = data.value.cardStatements.find((item) => item.id === statementId)
+    if (!statement) return
+    statement.paidAmount = Math.min(statement.totalAmount, statement.paidAmount + Math.max(0, amount))
+    if (statement.paidAmount >= statement.totalAmount) statement.status = 'paid'
+  }
+
+  function recordSubeMovement(movement: SubeMovement, registerInFinance: boolean) {
+    const previous = data.value.subeMovements.find((item) => item.id === movement.id)
+    const financeId = previous?.financeTransactionId ?? movement.financeTransactionId ?? (registerInFinance ? createId('transaction') : undefined)
+    const card = data.value.subeCards.find((item) => item.id === movement.subeCardId)
+    if (!card) return
+
+    const previousDelta = previous ? (previous.type === 'topup' ? previous.amount : previous.type === 'trip' ? -previous.amount : previous.amount) : 0
+    const nextDelta = movement.type === 'topup' ? movement.amount : movement.type === 'trip' ? -movement.amount : movement.amount
+    card.balance = Math.max(0, card.balance - previousDelta + nextDelta)
+    card.lastUpdated = `${movement.date}T${movement.time || '00:00'}:00`
+
+    const saved = { ...movement, balanceAfter: card.balance, financeTransactionId: financeId }
+    upsert('subeMovements', saved)
+
+    if (registerInFinance && financeId) {
+      upsert('transactions', {
+        id: financeId,
+        type: 'expense',
+        title: movement.type === 'topup' ? `Carga ${card.nickname}` : `Viaje ${movement.line || movement.transport}`,
+        amount: movement.amount,
+        category: 'Transporte',
+        date: movement.date,
+        account: 'SUBE',
+        paymentMethod: card.nickname,
+        notes: movement.notes,
+        tags: ['sube', 'transporte'],
+        subeCardId: card.id
+      })
+    }
+  }
+
+  function removeSubeMovement(id: string) {
+    const movement = data.value.subeMovements.find((item) => item.id === id)
+    if (!movement) return
+    const card = data.value.subeCards.find((item) => item.id === movement.subeCardId)
+    if (card) {
+      const delta = movement.type === 'topup' ? movement.amount : movement.type === 'trip' ? -movement.amount : movement.amount
+      card.balance = Math.max(0, card.balance - delta)
+    }
+    if (movement.financeTransactionId) remove('transactions', movement.financeTransactionId)
+    remove('subeMovements', id)
+  }
+
+  function removeSubeCard(id: string) {
+    const transactionIds = data.value.subeMovements.filter((item) => item.subeCardId === id).map((item) => item.financeTransactionId).filter((value): value is string => Boolean(value))
+    data.value.transactions = data.value.transactions.filter((item) => !transactionIds.includes(item.id))
+    data.value.subeMovements = data.value.subeMovements.filter((item) => item.subeCardId !== id)
+    remove('subeCards', id)
+  }
+
   function exportData() {
-    const payload = { app: 'Vida Organizada', version: 2, exportedAt: new Date().toISOString(), data: data.value }
+    const payload = { app: 'Vida Organizada', version: 3, exportedAt: new Date().toISOString(), data: data.value }
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
@@ -141,9 +275,11 @@ export const useAppStore = defineStore('app', () => {
 
   return {
     data, now, today, currentDay, currentMonth, monthlyIncome, monthlyExpenses, monthlyBalance, todayExpenses,
-    openTasks, lowStockItems, lowStockMedications, upsert, remove, upsertMedication, removeMedication,
+    openTasks, lowStockItems, lowStockMedications, walletCreditLimit, walletAvailableLimit, walletCurrentDebt,
+    totalSubeBalance, lowBalanceSubeCards, upsert, remove, upsertMedication, removeMedication,
     toggleMedicationTaken, isMedicationTaken, updateMedicationStock, upsertRoutine, removeRoutine,
     toggleRoutineDone, isRoutineDone, upsertExpense, removeExpense, upsertHabit, removeHabit, toggleHabit,
-    upsertCalendarEvent, removeCalendarEvent, exportData, importData, resetData
+    upsertCalendarEvent, removeCalendarEvent, recordCardPurchase, removeCardPurchase, removePaymentCard,
+    payCardStatement, recordSubeMovement, removeSubeMovement, removeSubeCard, exportData, importData, resetData
   }
 })
