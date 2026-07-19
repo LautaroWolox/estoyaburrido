@@ -1,5 +1,4 @@
 import { createApp } from 'vue'
-import { createPinia } from 'pinia'
 import PrimeVue from 'primevue/config'
 import ToastService from 'primevue/toastservice'
 import ConfirmationService from 'primevue/confirmationservice'
@@ -9,11 +8,13 @@ import '@/assets/main.css'
 import '@/assets/modules-a.css'
 import '@/assets/modules-b.css'
 import '@/assets/responsive.css'
+import '@/assets/auth.css'
 import App from './App.vue'
 import router from './router'
+import { pinia } from '@/app/pinia'
 
 createApp(App)
-  .use(createPinia())
+  .use(pinia)
   .use(router)
   .use(PrimeVue, {
     ripple: true,
