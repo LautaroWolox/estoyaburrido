@@ -7,17 +7,16 @@ import Tag from 'primevue/tag'
 import EmptyState from '@/components/EmptyState.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import { useAppStore } from '@/stores/app'
-import { formatCurrency, formatDate, weekDays } from '@/utils/date'
+import { formatCurrency, formatDate, todayKey, weekDays } from '@/utils/date'
 
 const store = useAppStore()
-const day = new Date().getDay()
-const medications = computed(() => store.data.medications.filter((item) => item.active && item.days.includes(day)).flatMap((item) => item.times.map((time) => ({ item, time }))).sort((a, b) => a.time.localeCompare(b.time)))
-const routines = computed(() => store.data.routines.filter((item) => item.active && item.days.includes(day)).sort((a, b) => a.startTime.localeCompare(b.startTime)))
+const medications = computed(() => store.data.medications.filter((item) => item.active && item.days.includes(store.currentDay)).flatMap((item) => item.times.map((time) => ({ item, time }))).sort((a, b) => a.time.localeCompare(b.time)))
+const routines = computed(() => store.data.routines.filter((item) => item.active && item.days.includes(store.currentDay)).sort((a, b) => a.startTime.localeCompare(b.startTime)))
 const completed = computed(() => medications.value.filter(({ item, time }) => store.isMedicationTaken(item.id, time)).length + routines.value.filter((item) => store.isRoutineDone(item.id)).length)
 const total = computed(() => medications.value.length + routines.value.length)
 const progress = computed(() => total.value ? Math.round(completed.value / total.value * 100) : 0)
 const events = computed(() => [...store.data.calendarEvents].filter((item) => item.date >= store.today).sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`)).slice(0, 5))
-const weekKeys = computed(() => weekDays().map((date) => date.toISOString().slice(0, 10)))
+const weekKeys = computed(() => weekDays(store.now).map(todayKey))
 const habitLogs = computed(() => store.data.habits.reduce((sum, habit) => sum + habit.logs.filter((date) => weekKeys.value.includes(date)).length, 0))
 </script>
 
