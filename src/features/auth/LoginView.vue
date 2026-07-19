@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
@@ -16,6 +16,12 @@ const email = ref(auth.account?.email ?? '')
 const password = ref('')
 const remember = ref(true)
 const error = ref('')
+const lockMessage = computed(() => {
+  if (route.query.reason === 'timeout') return 'La sesión se bloqueó automáticamente por inactividad.'
+  if (route.query.reason === 'background') return 'La sesión se bloqueó al pasar la aplicación a segundo plano.'
+  if (route.query.reason === 'manual-lock') return 'La aplicación quedó bloqueada correctamente.'
+  return ''
+})
 
 async function submit() {
   error.value = ''
@@ -39,6 +45,7 @@ async function submit() {
     <Message v-if="!auth.hasAccount" severity="info" :closable="false" class="auth-message">
       Todavía no existe un acceso local. Crealo una sola vez para proteger la aplicación en este dispositivo.
     </Message>
+    <Message v-if="lockMessage" severity="info" :closable="false" class="auth-message">{{ lockMessage }}</Message>
     <Message v-if="error" severity="error" :closable="false" class="auth-message">{{ error }}</Message>
 
     <form class="auth-form" @submit.prevent="submit">
