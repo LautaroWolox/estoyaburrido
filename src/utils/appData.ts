@@ -7,7 +7,7 @@ const collectionKeys: Array<Exclude<keyof AppData, 'settings'>> = [
   'transactions', 'budgets', 'recurringTransactions', 'subscriptions', 'debts', 'savingsGoals', 'installmentPlans',
   'tasks', 'focusSessions', 'shoppingLists', 'shoppingItems', 'inventoryItems', 'homeTasks', 'maintenanceItems',
   'warranties', 'healthProfessionals', 'medicalAppointments', 'medicalDocuments', 'vitalRecords', 'symptomLogs',
-  'emergencyContacts'
+  'emergencyContacts', 'paymentCards', 'cardPurchases', 'cardStatements', 'subeCards', 'subeMovements'
 ]
 
 const isRecord = (value: unknown): value is JsonRecord => typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -19,7 +19,12 @@ function readSettings(raw: unknown, fallback: AppSettings): AppSettings {
     displayName: typeof raw.displayName === 'string' ? raw.displayName : fallback.displayName,
     currency: raw.currency === 'ARS' || raw.currency === 'USD' || raw.currency === 'EUR' ? raw.currency : fallback.currency,
     darkMode: typeof raw.darkMode === 'boolean' ? raw.darkMode : fallback.darkMode,
-    notificationsEnabled: typeof raw.notificationsEnabled === 'boolean' ? raw.notificationsEnabled : fallback.notificationsEnabled
+    notificationsEnabled: typeof raw.notificationsEnabled === 'boolean' ? raw.notificationsEnabled : fallback.notificationsEnabled,
+    walletHideAmounts: typeof raw.walletHideAmounts === 'boolean' ? raw.walletHideAmounts : fallback.walletHideAmounts,
+    walletAutoLockMinutes: typeof raw.walletAutoLockMinutes === 'number' && Number.isFinite(raw.walletAutoLockMinutes) ? raw.walletAutoLockMinutes : fallback.walletAutoLockMinutes,
+    walletLockOnBackground: typeof raw.walletLockOnBackground === 'boolean' ? raw.walletLockOnBackground : fallback.walletLockOnBackground,
+    walletRequirePassword: typeof raw.walletRequirePassword === 'boolean' ? raw.walletRequirePassword : fallback.walletRequirePassword,
+    walletMaskSubeNumber: typeof raw.walletMaskSubeNumber === 'boolean' ? raw.walletMaskSubeNumber : fallback.walletMaskSubeNumber
   }
 }
 
