@@ -1,6 +1,6 @@
 # Vida Organizada
 
-Aplicación personal responsive para centralizar finanzas, salud, medicación, tareas, hogar, compras, calendario, rutinas y hábitos. Está construida como SPA/PWA para funcionar en teléfono, tablet, notebook y escritorio.
+Aplicación personal responsive para centralizar finanzas, salud, medicación, tareas, hogar, compras, calendario, rutinas y hábitos. Está construida como SPA/PWA para funcionar en celular, tablet, notebook y escritorio.
 
 ## Módulos
 
@@ -39,13 +39,29 @@ Aplicación personal responsive para centralizar finanzas, salud, medicación, t
 - Modo claro/oscuro, exportación e importación de respaldos.
 - Recordatorios locales mientras la aplicación está abierta.
 
+## Acceso
+
+La aplicación incluye:
+
+- Login responsive.
+- Creación inicial de un acceso local.
+- Contraseña almacenada como hash en el navegador.
+- Sesión temporal o recordada durante 30 días.
+- Protección de todas las rutas privadas.
+- Recuperación local de la contraseña.
+- Cierre de sesión desde escritorio y móvil.
+
+> Esta autenticación es transitoria y protege el acceso únicamente en el dispositivo actual. La etapa de Supabase reemplazará el proveedor local por autenticación segura, recuperación por correo y sincronización entre dispositivos.
+
 ## Tecnologías
 
-Vue 3, TypeScript, Vite, Pinia, Vue Router, PrimeVue, PrimeIcons, Aura, date-fns y vite-plugin-pwa.
+Vue 3, TypeScript, Vite, Pinia, Vue Router, **PrimeVue 4.5.5 MIT**, PrimeIcons, Aura, date-fns y vite-plugin-pwa.
+
+Las versiones de PrimeVue y del paquete de temas están fijadas sin rangos para evitar que una instalación futura actualice accidentalmente a PrimeVue 5 y vuelva a requerir una licencia PrimeUI.
 
 ## Desarrollo local
 
-Requiere Node.js 24 o superior.
+Requiere Node.js 24.
 
 ```bash
 npm install
@@ -58,6 +74,18 @@ Validación y build:
 npm run build
 npm run preview
 ```
+
+## Despliegue en Netlify
+
+El repositorio incluye `netlify.toml` con:
+
+- Comando de build `npm run build`.
+- Carpeta de publicación `dist`.
+- Node.js 24.
+- Reescritura SPA hacia `index.html` para que funcionen rutas como `/login`, `/salud` o `/finanzas` al recargar.
+- Encabezados básicos de seguridad y caché para los recursos generados.
+
+En Netlify alcanza con importar el repositorio desde GitHub. La configuración será detectada automáticamente.
 
 ## Persistencia actual
 
