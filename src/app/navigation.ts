@@ -23,6 +23,7 @@ export const navigationSections: NavigationSection[] = [
     label: 'Vida personal',
     items: [
       { label: 'Salud', shortLabel: 'Salud', icon: 'pi pi-heart', to: '/salud' },
+      { label: 'Billetera', shortLabel: 'Billetera', icon: 'pi pi-credit-card', to: '/billetera' },
       { label: 'Finanzas', shortLabel: 'Dinero', icon: 'pi pi-wallet', to: '/finanzas' },
       { label: 'Hogar', shortLabel: 'Hogar', icon: 'pi pi-home', to: '/hogar' }
     ]
@@ -44,4 +45,4 @@ export const navigationSections: NavigationSection[] = [
 ]
 
 export const navigation = navigationSections.flatMap((section) => section.items)
-export const bottomNavigation = navigation.filter((item) => ['/', '/calendario', '/tareas', '/salud', '/finanzas'].includes(item.to))
+export const bottomNavigation = navigation.filter((item) => ['/', '/calendario', '/tareas', '/salud', '/billetera'].includes(item.to))
