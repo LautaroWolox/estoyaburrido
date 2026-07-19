@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { format } from 'date-fns'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import ProgressBar from 'primevue/progressbar'
@@ -7,50 +8,28 @@ import Tag from 'primevue/tag'
 import EmptyState from '@/components/EmptyState.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import { useAppStore } from '@/stores/app'
-import { formatCurrency, formatDate, todayKey, weekDays } from '@/utils/date'
+import { formatCurrency, formatDate, percentage, weekDays } from '@/utils/date'
 
-const store = useAppStore()
-const medications = computed(() => store.data.medications.filter((item) => item.active && item.days.includes(store.currentDay)).flatMap((item) => item.times.map((time) => ({ item, time }))).sort((a, b) => a.time.localeCompare(b.time)))
-const routines = computed(() => store.data.routines.filter((item) => item.active && item.days.includes(store.currentDay)).sort((a, b) => a.startTime.localeCompare(b.startTime)))
-const completed = computed(() => medications.value.filter(({ item, time }) => store.isMedicationTaken(item.id, time)).length + routines.value.filter((item) => store.isRoutineDone(item.id)).length)
-const total = computed(() => medications.value.length + routines.value.length)
-const progress = computed(() => total.value ? Math.round(completed.value / total.value * 100) : 0)
-const events = computed(() => [...store.data.calendarEvents].filter((item) => item.date >= store.today).sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`)).slice(0, 5))
-const weekKeys = computed(() => weekDays(store.now).map(todayKey))
-const habitLogs = computed(() => store.data.habits.reduce((sum, habit) => sum + habit.logs.filter((date) => weekKeys.value.includes(date)).length, 0))
+const store=useAppStore()
+const medications=computed(()=>store.data.medications.filter(item=>item.active&&item.days.includes(store.currentDay)).flatMap(item=>item.times.map(time=>({item,time}))).sort((a,b)=>a.time.localeCompare(b.time)))
+const routines=computed(()=>store.data.routines.filter(item=>item.active&&item.days.includes(store.currentDay)).sort((a,b)=>a.startTime.localeCompare(b.startTime)))
+const tasks=computed(()=>store.data.tasks.filter(item=>item.status!=='done'&&(item.dueDate===store.today||item.status==='doing')).sort((a,b)=>`${a.dueTime}${a.priority}`.localeCompare(`${b.dueTime}${b.priority}`)).slice(0,5))
+const completed=computed(()=>medications.value.filter(({item,time})=>store.isMedicationTaken(item.id,time)).length+routines.value.filter(item=>store.isRoutineDone(item.id)).length+store.data.tasks.filter(item=>item.status==='done'&&item.completedAt?.slice(0,10)===store.today).length)
+const total=computed(()=>medications.value.length+routines.value.length+tasks.value.length);const progress=computed(()=>percentage(completed.value,total.value))
+const events=computed(()=>[...store.data.calendarEvents].filter(item=>item.date>=store.today).sort((a,b)=>`${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`)).slice(0,5))
+const appointments=computed(()=>store.data.medicalAppointments.filter(item=>item.status==='scheduled'&&item.date>=store.today).sort((a,b)=>`${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`)).slice(0,3))
+const pendingShopping=computed(()=>store.data.shoppingItems.filter(item=>!item.checked&&store.data.shoppingLists.some(list=>list.id===item.listId&&list.status==='active')).length)
+const nextHomeTasks=computed(()=>store.data.homeTasks.filter(item=>!item.completed).sort((a,b)=>a.nextDueDate.localeCompare(b.nextDueDate)).slice(0,3))
+const weekKeys=computed(()=>weekDays().map(date=>format(date,'yyyy-MM-dd')))
+const habitLogs=computed(()=>store.data.habits.reduce((sum,habit)=>sum+habit.logs.filter(date=>weekKeys.value.includes(date)).length,0))
 </script>
 
-<template>
-  <section class="page-container">
-    <PageHeader eyebrow="Resumen de hoy" :title="`Hola, ${store.data.settings.displayName || 'bienvenido'}`" description="Todo lo importante de tu día, en un solo lugar.">
-      <RouterLink to="/calendario"><Button label="Ver calendario" icon="pi pi-calendar" /></RouterLink>
-    </PageHeader>
-
-    <div class="hero-card">
-      <div><span>{{ formatDate(store.today, "EEEE d 'de' MMMM") }}</span><h2>{{ progress === 100 && total ? '¡Día completado!' : 'Avanzá a tu ritmo' }}</h2><p>{{ completed }} de {{ total }} actividades principales completadas.</p></div>
-      <div class="hero-progress"><strong>{{ progress }}%</strong><ProgressBar :value="progress" :show-value="false" /></div>
-    </div>
-
-    <div class="stats-grid">
-      <Card class="stat-card"><template #content><i class="pi pi-heart-fill rose"/><span>Medicaciones</span><strong>{{ medications.filter(({ item, time }) => store.isMedicationTaken(item.id, time)).length }}/{{ medications.length }}</strong><small>tomas de hoy</small></template></Card>
-      <Card class="stat-card"><template #content><i class="pi pi-list-check violet"/><span>Rutinas</span><strong>{{ routines.filter((item) => store.isRoutineDone(item.id)).length }}/{{ routines.length }}</strong><small>completadas hoy</small></template></Card>
-      <Card class="stat-card"><template #content><i class="pi pi-wallet green"/><span>Gastos del mes</span><strong>{{ formatCurrency(store.monthlyExpenses, store.data.settings.currency) }}</strong><small>hoy: {{ formatCurrency(store.todayExpenses, store.data.settings.currency) }}</small></template></Card>
-      <Card class="stat-card"><template #content><i class="pi pi-chart-line blue"/><span>Hábitos</span><strong>{{ habitLogs }}</strong><small>registros semanales</small></template></Card>
-    </div>
-
-    <div class="two-columns">
-      <Card class="content-card"><template #title><div class="card-title"><span>Plan de hoy</span><RouterLink to="/rutinas">Ver todo</RouterLink></div></template><template #content>
-        <div v-if="medications.length || routines.length" class="timeline-list">
-          <button v-for="entry in medications" :key="`${entry.item.id}-${entry.time}`" :class="['timeline-item', { done: store.isMedicationTaken(entry.item.id, entry.time) }]" @click="store.toggleMedicationTaken(entry.item.id, entry.time)"><b>{{ entry.time }}</b><i class="dot" :style="{ background: entry.item.color }"/><span><strong>{{ entry.item.name }}</strong><small>{{ entry.item.dose }}</small></span><i :class="store.isMedicationTaken(entry.item.id, entry.time) ? 'pi pi-check-circle' : 'pi pi-circle'"/></button>
-          <button v-for="routine in routines" :key="routine.id" :class="['timeline-item', { done: store.isRoutineDone(routine.id) }]" @click="store.toggleRoutineDone(routine.id)"><b>{{ routine.startTime }}</b><i class="dot" :style="{ background: routine.color }"/><span><strong>{{ routine.title }}</strong><small>{{ routine.durationMinutes }} min · {{ routine.category }}</small></span><i :class="store.isRoutineDone(routine.id) ? 'pi pi-check-circle' : 'pi pi-circle'"/></button>
-        </div>
-        <EmptyState v-else icon="pi pi-sun" title="Tu día está libre" description="Agregá medicaciones o rutinas para verlas acá."/>
-      </template></Card>
-
-      <Card class="content-card"><template #title><div class="card-title"><span>Próximos eventos</span><RouterLink to="/calendario">Agenda</RouterLink></div></template><template #content>
-        <div v-if="events.length" class="event-list"><div v-for="event in events" :key="event.id" class="event-row"><span class="date-box"><strong>{{ formatDate(event.date, 'dd') }}</strong><small>{{ formatDate(event.date, 'MMM') }}</small></span><span><strong>{{ event.title }}</strong><small>{{ event.time || 'Todo el día' }}</small></span><Tag :value="event.kind === 'appointment' ? 'Turno' : event.kind === 'task' ? 'Tarea' : 'Personal'" rounded/></div></div>
-        <EmptyState v-else icon="pi pi-calendar-plus" title="Sin eventos próximos" description="Usá el calendario para registrar turnos, tareas y compromisos."/>
-      </template></Card>
-    </div>
-  </section>
-</template>
+<template><section class="page-container dashboard-page"><PageHeader eyebrow="Tu centro personal" :title="`Hola, ${store.data.settings.displayName||'bienvenido'}`" description="Una vista de lo importante para que decidas qué atender primero."><RouterLink to="/calendario"><Button label="Abrir agenda" icon="pi pi-calendar"/></RouterLink></PageHeader>
+<div class="dashboard-hero"><div><span>{{formatDate(store.today,"EEEE d 'de' MMMM")}}</span><h2>{{progress===100&&total?'¡Tu día está completo!':'Todo lo importante, en un solo lugar'}}</h2><p>{{completed}} de {{total}} acciones principales completadas. Avanzá sin perder de vista tu salud, dinero y hogar.</p><div class="hero-actions"><RouterLink to="/tareas"><Button label="Ver tareas" icon="pi pi-check-square"/></RouterLink><RouterLink to="/salud"><Button label="Revisar salud" icon="pi pi-heart" severity="secondary" outlined/></RouterLink></div></div><div class="hero-progress-ring" :style="{'--ring':`${progress*3.6}deg`}"><strong>{{progress}}%</strong><span>del día</span></div></div>
+<div class="dashboard-modules"><RouterLink to="/tareas" class="module-card violet"><span><i class="pi pi-check-square"/></span><div><small>Tareas abiertas</small><strong>{{store.openTasks.length}}</strong><p>{{tasks.length}} requieren atención hoy</p></div><i class="pi pi-arrow-right"/></RouterLink><RouterLink to="/salud" class="module-card rose"><span><i class="pi pi-heart"/></span><div><small>Salud</small><strong>{{medications.filter(({item,time})=>store.isMedicationTaken(item.id,time)).length}}/{{medications.length}}</strong><p>{{store.lowStockMedications.length}} medicaciones con stock bajo</p></div><i class="pi pi-arrow-right"/></RouterLink><RouterLink to="/finanzas" class="module-card green"><span><i class="pi pi-wallet"/></span><div><small>Balance mensual</small><strong>{{formatCurrency(store.monthlyBalance,store.data.settings.currency)}}</strong><p>{{formatCurrency(store.monthlyExpenses,store.data.settings.currency)}} gastados</p></div><i class="pi pi-arrow-right"/></RouterLink><RouterLink to="/hogar" class="module-card amber"><span><i class="pi pi-home"/></span><div><small>Hogar</small><strong>{{pendingShopping}}</strong><p>productos pendientes · {{store.lowStockItems.length}} con stock bajo</p></div><i class="pi pi-arrow-right"/></RouterLink></div>
+<div class="dashboard-grid"><Card class="content-card span-2"><template #title><div class="card-title"><span>Plan de hoy</span><RouterLink to="/tareas">Organizar</RouterLink></div></template><template #content><div v-if="medications.length||routines.length||tasks.length" class="unified-timeline"><button v-for="entry in medications" :key="`${entry.item.id}-${entry.time}`" :class="{done:store.isMedicationTaken(entry.item.id,entry.time)}" @click="store.toggleMedicationTaken(entry.item.id,entry.time)"><b>{{entry.time}}</b><span class="timeline-dot" :style="{background:entry.item.color}"/><div><strong>{{entry.item.name}}</strong><small>{{entry.item.dose}} · Medicación</small></div><i :class="store.isMedicationTaken(entry.item.id,entry.time)?'pi pi-check-circle':'pi pi-circle'"/></button><button v-for="routine in routines" :key="routine.id" :class="{done:store.isRoutineDone(routine.id)}" @click="store.toggleRoutineDone(routine.id)"><b>{{routine.startTime}}</b><span class="timeline-dot" :style="{background:routine.color}"/><div><strong>{{routine.title}}</strong><small>{{routine.durationMinutes}} min · {{routine.category}}</small></div><i :class="store.isRoutineDone(routine.id)?'pi pi-check-circle':'pi pi-circle'"/></button><RouterLink v-for="task in tasks" :key="task.id" to="/tareas" class="timeline-link"><b>{{task.dueTime||'—'}}</b><span class="timeline-dot task"/><div><strong>{{task.title}}</strong><small>{{task.priority==='urgent'?'Urgente':task.priority==='high'?'Alta prioridad':'Tarea'}}</small></div><i class="pi pi-arrow-right"/></RouterLink></div><EmptyState v-else icon="pi pi-sun" title="Tu día está libre" description="No hay acciones programadas para hoy."/></template></Card>
+<Card class="content-card"><template #title><div class="card-title"><span>Próximos eventos</span><RouterLink to="/calendario">Agenda</RouterLink></div></template><template #content><div v-if="events.length" class="event-list"><article v-for="event in events" :key="event.id"><span class="date-box"><strong>{{formatDate(event.date,'dd')}}</strong><small>{{formatDate(event.date,'MMM')}}</small></span><div><strong>{{event.title}}</strong><small>{{event.allDay?'Todo el día':event.time}} · {{event.calendarId||'Personal'}}</small></div><Tag :value="event.kind==='appointment'?'Turno':event.kind==='task'?'Tarea':'Personal'" severity="secondary" rounded/></article></div><EmptyState v-else icon="pi pi-calendar" title="Sin eventos próximos" description="Agregá compromisos a tu calendario."/></template></Card>
+<Card class="content-card"><template #title><div class="card-title"><span>Próximos turnos</span><RouterLink to="/salud/turnos">Salud</RouterLink></div></template><template #content><div v-if="appointments.length" class="smart-list"><article v-for="item in appointments" :key="item.id" class="smart-row"><span class="row-icon blue"><i class="pi pi-calendar-plus"/></span><div><strong>{{item.title}}</strong><small>{{formatDate(item.date,'dd MMM')}} · {{item.time}}</small></div></article></div><EmptyState v-else icon="pi pi-calendar-plus" title="Sin turnos" description="No hay consultas futuras registradas."/></template></Card>
+<Card class="content-card"><template #title><div class="card-title"><span>Hogar próximo</span><RouterLink to="/hogar">Ver hogar</RouterLink></div></template><template #content><div v-if="nextHomeTasks.length" class="smart-list"><article v-for="item in nextHomeTasks" :key="item.id" class="smart-row"><span class="row-icon green"><i class="pi pi-home"/></span><div><strong>{{item.title}}</strong><small>{{item.room}} · {{formatDate(item.nextDueDate,'dd MMM')}}</small></div></article></div><EmptyState v-else icon="pi pi-home" title="Hogar al día" description="No hay tareas próximas registradas."/></template></Card>
+<Card class="content-card"><template #title><div class="card-title"><span>Constancia semanal</span><RouterLink to="/habitos">Hábitos</RouterLink></div></template><template #content><div class="habit-overview"><strong>{{habitLogs}}</strong><span>registros esta semana</span><ProgressBar :value="percentage(habitLogs,Math.max(1,store.data.habits.reduce((s,x)=>s+x.targetPerWeek,0)))" :show-value="false"/><small>{{store.data.habits.length}} hábitos activos</small></div></template></Card></div>
+</section></template>

@@ -1,39 +1,47 @@
 # Vida Organizada
 
-Aplicación personal responsive para centralizar calendario, medicación, rutinas diarias, gastos y hábitos. Está construida como SPA/PWA para funcionar en teléfono, tablet, notebook y escritorio.
+Aplicación personal responsive para centralizar finanzas, salud, medicación, tareas, hogar, compras, calendario, rutinas y hábitos. Está construida como SPA/PWA para funcionar en teléfono, tablet, notebook y escritorio.
 
-## Funcionalidades
+## Módulos
 
-- Panel diario con progreso, tomas, rutinas, gastos y próximos eventos.
-- Calendario mensual unificado con eventos, turnos, tareas, medicación y rutinas.
-- Medicaciones con dosis, días, múltiples horarios y registro de tomas.
-- Rutinas recurrentes con categoría, horario, duración y seguimiento diario.
-- Gastos por categoría, método de pago y resumen mensual.
-- Hábitos con meta semanal y registro por día.
-- Modo claro y oscuro.
-- Persistencia local automática.
-- Exportación e importación de respaldos JSON.
-- Instalación como PWA.
+### Finanzas
+- Ingresos y gastos con filtros, categorías y medios de pago.
+- Presupuestos mensuales y seguimiento de consumo.
+- Gastos e ingresos recurrentes.
+- Suscripciones, cuotas de tarjeta, deudas y préstamos.
+- Metas de ahorro y panel financiero consolidado.
 
-> La sección de medicación sirve para organización personal y no reemplaza indicaciones ni asesoramiento profesional de salud.
+### Salud
+- Medicaciones con tratamiento, stock, alertas e historial de tomas.
+- Turnos, profesionales, centros médicos y estudios.
+- Registro de síntomas, mediciones y contactos de emergencia.
+- Panel de salud con próximos eventos y estado general.
+
+### Tareas
+- Bandeja rápida, prioridades, etiquetas y vencimientos.
+- Subtareas, recurrencia, vistas de hoy, semana y todas.
+- Temporizador de enfoque tipo Pomodoro vinculado a tareas.
+
+### Hogar
+- Listas de compras con presupuesto y conversión automática a gasto.
+- Inventario, vencimientos y alertas de stock mínimo.
+- Tareas domésticas, mantenimientos, garantías y reparaciones.
+
+### Calendario avanzado
+- Vistas mensual, semanal, diaria y agenda.
+- Eventos recurrentes, duración, recordatorios, ubicación y enlaces.
+- Participantes, calendarios por color y movimiento entre fechas.
+- Integración visual de medicación, tareas, rutinas y compromisos.
+
+### Organización personal
+- Rutinas recurrentes y hábitos semanales.
+- Panel diario consolidado.
+- Modo claro/oscuro, exportación e importación de respaldos.
+- Recordatorios locales mientras la aplicación está abierta.
 
 ## Tecnologías
 
-Vue 3, TypeScript, Vite, Pinia, Vue Router, PrimeVue 5, PrimeIcons, Aura, date-fns y vite-plugin-pwa.
-
-## Arquitectura
-
-```text
-src/
-├── app/          # navegación y configuración transversal
-├── assets/       # estilos globales responsive
-├── components/   # componentes reutilizables
-├── features/     # módulos funcionales separados
-├── router/       # rutas con lazy loading
-├── stores/       # estado y persistencia
-├── types/        # contratos de dominio
-└── utils/        # utilidades
-```
+Vue 3, TypeScript, Vite, Pinia, Vue Router, PrimeVue, PrimeIcons, Aura, date-fns y vite-plugin-pwa.
 
 ## Desarrollo local
 
@@ -51,6 +59,8 @@ npm run build
 npm run preview
 ```
 
-## Próxima etapa recomendada
+## Persistencia actual
 
-La primera versión guarda los datos en `localStorage`. La arquitectura permite conectar Supabase o una API REST para autenticación, sincronización multidispositivo, notificaciones push, presupuestos, lista de compras, documentos personales y calendarios compartidos.
+La versión visual guarda la información en `localStorage` y permite exportar/importar respaldos JSON. La próxima etapa será conectar autenticación, base de datos, sincronización multidispositivo y notificaciones push mediante Supabase o una API propia.
+
+> El módulo de salud sirve para organización personal y no reemplaza indicaciones ni asesoramiento profesional.
