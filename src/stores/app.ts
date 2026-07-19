@@ -70,7 +70,7 @@ export const useAppStore = defineStore('app', () => {
   const lowStockItems = computed(() => data.value.inventoryItems.filter((item) => item.quantity <= item.minStock))
   const lowStockMedications = computed(() => data.value.medications.filter((item) => item.stock !== undefined && item.stockAlert !== undefined && item.stock <= item.stockAlert))
 
-  function upsert(collection: CollectionKey, item: Identifiable) {
+  function upsert<T extends Identifiable>(collection: CollectionKey, item: T) {
     const list = data.value[collection] as unknown as Identifiable[]
     const index = list.findIndex((entry) => entry.id === item.id)
     if (index >= 0) list[index] = item
