@@ -1,8 +1,9 @@
-import { computed, ref, watch } from 'vue'
+import { computed, onScopeDispose, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import type { AppData, CalendarEvent, Expense, Habit, Medication, Routine } from '@/types/domain'
 import { createId } from '@/utils/id'
 import { monthKey, todayKey } from '@/utils/date'
+import { parseAppData } from '@/utils/appData'
 
 const STORAGE_KEY = 'vida-organizada:v1'
 
@@ -21,21 +22,49 @@ const defaultData = (): AppData => ({
 })
 
 const loadInitialData = (): AppData => {
+  const fallback = defaultData()
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
-    return stored ? { ...defaultData(), ...JSON.parse(stored) } : defaultData()
+    return stored ? parseAppData(JSON.parse(stored), fallback) : fallback
   } catch {
-    return defaultData()
+    return fallback
   }
 }
 
 export const useAppStore = defineStore('app', () => {
   const data = ref<AppData>(loadInitialData())
-  watch(data, (value) => localStorage.setItem(STORAGE_KEY, JSON.stringify(value)), { deep: true })
-  watch(() => data.value.settings.darkMode, (enabled) => document.documentElement.classList.toggle('app-dark', enabled), { immediate: true })
+  const now = ref(new Date())
 
-  const today = computed(todayKey)
-  const monthlyExpenses = computed(() => data.value.expenses.filter((item) => item.date.startsWith(monthKey())).reduce((sum, item) => sum + item.amount, 0))
+  const refreshClock = () => { now.value = new Date() }
+  const handleVisibility = () => { if (!document.hidden) refreshClock() }
+  const clockId = window.setInterval(refreshClock, 60_000)
+  window.addEventListener('focus', refreshClock)
+  document.addEventListener('visibilitychange', handleVisibility)
+
+  onScopeDispose(() => {
+    window.clearInterval(clockId)
+    window.removeEventListener('focus', refreshClock)
+    document.removeEventListener('visibilitychange', handleVisibility)
+  })
+
+  watch(data, (value) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(value))
+    } catch (error) {
+      console.error('No se pudieron guardar los datos localmente.', error)
+    }
+  }, { deep: true })
+
+  watch(
+    () => data.value.settings.darkMode,
+    (enabled) => document.documentElement.classList.toggle('app-dark', enabled),
+    { immediate: true }
+  )
+
+  const today = computed(() => todayKey(now.value))
+  const currentDay = computed(() => now.value.getDay())
+  const currentMonth = computed(() => monthKey(now.value))
+  const monthlyExpenses = computed(() => data.value.expenses.filter((item) => item.date.startsWith(currentMonth.value)).reduce((sum, item) => sum + item.amount, 0))
   const todayExpenses = computed(() => data.value.expenses.filter((item) => item.date === today.value).reduce((sum, item) => sum + item.amount, 0))
 
   function upsertMedication(item: Medication) {
@@ -109,8 +138,37 @@ export const useAppStore = defineStore('app', () => {
     anchor.click()
     URL.revokeObjectURL(url)
   }
-  async function importData(file: File) { data.value = { ...defaultData(), ...(JSON.parse(await file.text()) as AppData) } }
+  async function importData(file: File) {
+    const fallback = defaultData()
+    data.value = parseAppData(JSON.parse(await file.text()), fallback)
+  }
   function resetData() { data.value = defaultData() }
 
-  return { data, today, monthlyExpenses, todayExpenses, upsertMedication, removeMedication, toggleMedicationTaken, isMedicationTaken, upsertRoutine, removeRoutine, toggleRoutineDone, isRoutineDone, upsertExpense, removeExpense, upsertHabit, removeHabit, toggleHabit, upsertCalendarEvent, removeCalendarEvent, exportData, importData, resetData }
+  return {
+    data,
+    now,
+    today,
+    currentDay,
+    currentMonth,
+    monthlyExpenses,
+    todayExpenses,
+    upsertMedication,
+    removeMedication,
+    toggleMedicationTaken,
+    isMedicationTaken,
+    upsertRoutine,
+    removeRoutine,
+    toggleRoutineDone,
+    isRoutineDone,
+    upsertExpense,
+    removeExpense,
+    upsertHabit,
+    removeHabit,
+    toggleHabit,
+    upsertCalendarEvent,
+    removeCalendarEvent,
+    exportData,
+    importData,
+    resetData
+  }
 })
