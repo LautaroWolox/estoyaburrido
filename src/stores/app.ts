@@ -1,6 +1,6 @@
 import { computed, onScopeDispose, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
-import type { AppData, CalendarEvent, Medication, Routine } from '@/types/domain'
+import type { AppData, CalendarEvent, Expense, Habit, Medication, Routine } from '@/types/domain'
 import { createId } from '@/utils/id'
 import { monthKey, todayKey } from '@/utils/date'
 import { parseAppData } from '@/utils/appData'
@@ -72,10 +72,9 @@ export const useAppStore = defineStore('app', () => {
 
   function upsert(collection: CollectionKey, item: Identifiable) {
     const list = data.value[collection] as unknown as Identifiable[]
-    const value = item
-    const index = list.findIndex((entry) => entry.id === value.id)
-    if (index >= 0) list[index] = value
-    else list.push(value)
+    const index = list.findIndex((entry) => entry.id === item.id)
+    if (index >= 0) list[index] = item
+    else list.push(item)
   }
 
   function remove(collection: CollectionKey, id: string) {
@@ -110,6 +109,10 @@ export const useAppStore = defineStore('app', () => {
   }
   function isRoutineDone(routineId: string, date = today.value) { return data.value.routineLogs.some((item) => item.routineId === routineId && item.date === date) }
 
+  function upsertExpense(item: Expense) { upsert('expenses', item) }
+  function removeExpense(id: string) { remove('expenses', id) }
+  function upsertHabit(item: Habit) { upsert('habits', item) }
+  function removeHabit(id: string) { remove('habits', id) }
   function toggleHabit(habitId: string, date = today.value) {
     const habit = data.value.habits.find((item) => item.id === habitId)
     if (habit) habit.logs = habit.logs.includes(date) ? habit.logs.filter((item) => item !== date) : [...habit.logs, date]
@@ -140,7 +143,7 @@ export const useAppStore = defineStore('app', () => {
     data, now, today, currentDay, currentMonth, monthlyIncome, monthlyExpenses, monthlyBalance, todayExpenses,
     openTasks, lowStockItems, lowStockMedications, upsert, remove, upsertMedication, removeMedication,
     toggleMedicationTaken, isMedicationTaken, updateMedicationStock, upsertRoutine, removeRoutine,
-    toggleRoutineDone, isRoutineDone, toggleHabit, upsertCalendarEvent, removeCalendarEvent,
-    exportData, importData, resetData
+    toggleRoutineDone, isRoutineDone, upsertExpense, removeExpense, upsertHabit, removeHabit, toggleHabit,
+    upsertCalendarEvent, removeCalendarEvent, exportData, importData, resetData
   }
 })
