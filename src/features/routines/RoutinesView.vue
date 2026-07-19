@@ -27,7 +27,7 @@ const weekdays = [{ label: 'Domingo', value: 0 }, { label: 'Lunes', value: 1 }, 
 const categories = ['Bienestar', 'Casa', 'Trabajo', 'Estudio', 'Ejercicio', 'Personal', 'Descanso']
 const colors = ['#8b5cf6', '#0ea5e9', '#14b8a6', '#f59e0b', '#f43f5e', '#6366f1']
 const form = reactive({ title: '', category: categories[0], startTime: '09:00', durationMinutes: 30, days: [1,2,3,4,5] as number[], notes: '', color: colors[0], active: true })
-const today = computed(() => store.data.routines.filter((item) => item.active && item.days.includes(new Date().getDay())).sort((a,b) => a.startTime.localeCompare(b.startTime)))
+const today = computed(() => store.data.routines.filter((item) => item.active && item.days.includes(store.currentDay)).sort((a,b) => a.startTime.localeCompare(b.startTime)))
 const reset = () => { editingId.value=null; Object.assign(form,{ title:'', category:categories[0], startTime:'09:00', durationMinutes:30, days:[1,2,3,4,5], notes:'', color:colors[0], active:true }) }
 const create = () => { reset(); visible.value=true }
 const edit = (item: Routine) => { editingId.value=item.id; Object.assign(form,item); visible.value=true }
