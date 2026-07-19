@@ -6,7 +6,8 @@ import {
   getLocalAccount,
   getStoredSession,
   resetLocalPassword,
-  signInLocal
+  signInLocal,
+  verifyLocalPassword
 } from '@/services/auth/localAuth'
 import type { CreateAccountInput, SignInInput } from '@/services/auth/auth.types'
 
@@ -64,6 +65,15 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function verifyPassword(password: string) {
+    loading.value = true
+    try {
+      return await verifyLocalPassword(password)
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     account,
     session,
@@ -75,6 +85,7 @@ export const useAuthStore = defineStore('auth', () => {
     createAccount,
     signIn,
     signOut,
-    resetPassword
+    resetPassword,
+    verifyPassword
   }
 })
