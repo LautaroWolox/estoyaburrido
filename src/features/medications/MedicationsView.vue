@@ -24,7 +24,7 @@ const editingId = ref<string | null>(null)
 const weekdays = [{ label: 'Domingo', value: 0 }, { label: 'Lunes', value: 1 }, { label: 'Martes', value: 2 }, { label: 'Miércoles', value: 3 }, { label: 'Jueves', value: 4 }, { label: 'Viernes', value: 5 }, { label: 'Sábado', value: 6 }]
 const colors = ['#f43f5e', '#8b5cf6', '#0ea5e9', '#14b8a6', '#f59e0b', '#6366f1']
 const form = reactive({ name: '', dose: '', timesText: '08:00', days: [0,1,2,3,4,5,6] as number[], notes: '', color: colors[0], active: true })
-const today = computed(() => store.data.medications.filter((item) => item.active && item.days.includes(new Date().getDay())).flatMap((item) => item.times.map((time) => ({ item, time }))).sort((a,b) => a.time.localeCompare(b.time)))
+const today = computed(() => store.data.medications.filter((item) => item.active && item.days.includes(store.currentDay)).flatMap((item) => item.times.map((time) => ({ item, time }))).sort((a,b) => a.time.localeCompare(b.time)))
 const reset = () => { editingId.value = null; Object.assign(form, { name: '', dose: '', timesText: '08:00', days: [0,1,2,3,4,5,6], notes: '', color: colors[0], active: true }) }
 const create = () => { reset(); visible.value = true }
 const edit = (item: Medication) => { editingId.value = item.id; Object.assign(form, { ...item, timesText: item.times.join(', ') }); visible.value = true }
