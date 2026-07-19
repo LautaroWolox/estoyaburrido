@@ -3,6 +3,10 @@ export type TransactionType = 'income' | 'expense'
 export type TaskStatus = 'inbox' | 'todo' | 'doing' | 'done'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
 export type Recurrence = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly'
+export type WalletCardType = 'credit' | 'debit' | 'prepaid'
+export type WalletCardNetwork = 'visa' | 'mastercard' | 'amex' | 'cabal' | 'other'
+export type WalletCardStatus = 'active' | 'paused' | 'expired' | 'replaced'
+export type WalletProvider = 'apple' | 'google' | 'none'
 
 export interface Medication {
   id: string
@@ -71,6 +75,8 @@ export interface FinancialTransaction {
   tags: string[]
   recurringId?: string
   installmentPlanId?: string
+  cardId?: string
+  subeCardId?: string
 }
 
 export interface Budget { id: string; category: string; limit: number; month: string; alertAt: number }
@@ -114,7 +120,102 @@ export interface VitalRecord { id: string; type: 'weight' | 'pressure' | 'temper
 export interface SymptomLog { id: string; symptom: string; intensity: number; date: string; time: string; notes: string; medicationIds: string[] }
 export interface EmergencyContact { id: string; name: string; relation: string; phone: string; notes: string }
 
-export interface AppSettings { displayName: string; currency: string; darkMode: boolean; notificationsEnabled: boolean }
+export interface PaymentCard {
+  id: string
+  nickname: string
+  issuer: string
+  type: WalletCardType
+  network: WalletCardNetwork
+  last4: string
+  holderName: string
+  expiryMonth: number
+  expiryYear: number
+  closingDay: number
+  dueDay: number
+  creditLimit: number
+  availableLimit: number
+  account: string
+  color: string
+  isDefault: boolean
+  status: WalletCardStatus
+  issuerUrl: string
+  walletProvider: WalletProvider
+  notes: string
+  createdAt: string
+}
+
+export interface CardPurchase {
+  id: string
+  cardId: string
+  title: string
+  merchant: string
+  amount: number
+  date: string
+  category: string
+  installments: number
+  currentInstallment: number
+  status: 'pending' | 'posted' | 'refunded'
+  notes: string
+  financeTransactionId?: string
+}
+
+export interface CardStatement {
+  id: string
+  cardId: string
+  period: string
+  closingDate: string
+  dueDate: string
+  totalAmount: number
+  minimumPayment: number
+  paidAmount: number
+  status: 'open' | 'closed' | 'paid' | 'overdue'
+  notes: string
+}
+
+export interface SubeCard {
+  id: string
+  nickname: string
+  number: string
+  type: 'physical' | 'digital'
+  balance: number
+  lowBalanceAlert: number
+  lastUpdated: string
+  benefit: string
+  registeredTo: string
+  active: boolean
+  officialUrl: string
+  color: string
+  notes: string
+}
+
+export interface SubeMovement {
+  id: string
+  subeCardId: string
+  type: 'topup' | 'trip' | 'adjustment'
+  amount: number
+  date: string
+  time: string
+  transport: string
+  line: string
+  origin: string
+  destination: string
+  balanceAfter: number
+  status: 'pending' | 'credited' | 'completed'
+  notes: string
+  financeTransactionId?: string
+}
+
+export interface AppSettings {
+  displayName: string
+  currency: string
+  darkMode: boolean
+  notificationsEnabled: boolean
+  walletHideAmounts: boolean
+  walletAutoLockMinutes: number
+  walletLockOnBackground: boolean
+  walletRequirePassword: boolean
+  walletMaskSubeNumber: boolean
+}
 
 export interface AppData {
   medications: Medication[]
@@ -145,5 +246,10 @@ export interface AppData {
   vitalRecords: VitalRecord[]
   symptomLogs: SymptomLog[]
   emergencyContacts: EmergencyContact[]
+  paymentCards: PaymentCard[]
+  cardPurchases: CardPurchase[]
+  cardStatements: CardStatement[]
+  subeCards: SubeCard[]
+  subeMovements: SubeMovement[]
   settings: AppSettings
 }

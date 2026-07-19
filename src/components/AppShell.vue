@@ -6,6 +6,7 @@ import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import Drawer from 'primevue/drawer'
 import { bottomNavigation, navigationSections } from '@/app/navigation'
+import { useAutoLock } from '@/composables/useAutoLock'
 import { useMedicationReminders } from '@/composables/useMedicationReminders'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
@@ -21,6 +22,7 @@ const email = computed(() => auth.currentUser?.email || 'Sesión local')
 const initials = computed(() => displayName.value.trim().slice(0, 2).toUpperCase() || 'VO')
 const isActive = (to: string) => to === '/' ? route.path === '/' : route.path === to || route.path.startsWith(`${to}/`)
 useMedicationReminders()
+useAutoLock()
 
 function logout() {
   confirm.require({

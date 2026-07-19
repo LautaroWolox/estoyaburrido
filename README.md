@@ -1,6 +1,6 @@
 # Vida Organizada
 
-Aplicación personal responsive para centralizar finanzas, salud, medicación, tareas, hogar, compras, calendario, rutinas y hábitos. Está construida como SPA/PWA para funcionar en celular, tablet, notebook y escritorio.
+Aplicación personal responsive para centralizar finanzas, salud, medicación, tareas, hogar, compras, calendario, rutinas, hábitos, tarjetas y transporte. Está construida como SPA/PWA para funcionar en celular, tablet, notebook y escritorio.
 
 ## Módulos
 
@@ -10,6 +10,18 @@ Aplicación personal responsive para centralizar finanzas, salud, medicación, t
 - Gastos e ingresos recurrentes.
 - Suscripciones, cuotas de tarjeta, deudas y préstamos.
 - Metas de ahorro y panel financiero consolidado.
+
+### Billetera y transporte
+- Tarjetas de crédito, débito y prepagas.
+- Emisor, red, vencimiento, estado, límite y cuenta asociada.
+- Consumos, comercios, categorías, cuotas y reintegros.
+- Resúmenes, cierres, vencimientos, pagos mínimos y recordatorios.
+- SUBE física y digital con saldo, cargas, viajes, beneficios y alertas.
+- Integración opcional de consumos y cargas con Finanzas.
+- Handoff hacia la aplicación o sitio oficial del banco o SUBE.
+- Ocultamiento de importes, número SUBE protegido y bloqueo automático.
+
+La aplicación nunca solicita ni guarda el número bancario completo, CVV, PIN, claves ni códigos de verificación. La PWA tampoco emula tarjetas o SUBE por NFC: los pagos reales se completan mediante Apple Wallet, Google Wallet, la aplicación del emisor o SUBE oficial.
 
 ### Salud
 - Medicaciones con tratamiento, stock, alertas e historial de tomas.
@@ -50,6 +62,8 @@ La aplicación incluye:
 - Protección de todas las rutas privadas.
 - Recuperación local de la contraseña.
 - Cierre de sesión desde escritorio y móvil.
+- Bloqueo automático por inactividad o al pasar a segundo plano.
+- Revalidación por contraseña para información sensible de la billetera.
 
 > Esta autenticación es transitoria y protege el acceso únicamente en el dispositivo actual. La etapa de Supabase reemplazará el proveedor local por autenticación segura, recuperación por correo y sincronización entre dispositivos.
 
@@ -82,13 +96,13 @@ El repositorio incluye `netlify.toml` con:
 - Comando de build `npm run build`.
 - Carpeta de publicación `dist`.
 - Node.js 24.
-- Reescritura SPA hacia `index.html` para que funcionen rutas como `/login`, `/salud` o `/finanzas` al recargar.
+- Reescritura SPA hacia `index.html` para que funcionen rutas como `/login`, `/salud`, `/finanzas` o `/billetera` al recargar.
 - Encabezados básicos de seguridad y caché para los recursos generados.
 
 En Netlify alcanza con importar el repositorio desde GitHub. La configuración será detectada automáticamente.
 
 ## Persistencia actual
 
-La versión visual guarda la información en `localStorage` y permite exportar/importar respaldos JSON. La próxima etapa será conectar autenticación, base de datos, sincronización multidispositivo y notificaciones push mediante Supabase o una API propia.
+La versión visual guarda la información en `localStorage` y permite exportar/importar respaldos JSON. La próxima etapa será conectar autenticación, base de datos, cifrado, sincronización multidispositivo y notificaciones push mediante Supabase o una API propia.
 
 > El módulo de salud sirve para organización personal y no reemplaza indicaciones ni asesoramiento profesional.
