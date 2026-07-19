@@ -89,6 +89,12 @@ export async function signInLocal(input: SignInInput) {
   return session
 }
 
+export async function verifyLocalPassword(password: string) {
+  const account = getLocalAccount()
+  if (!account) return false
+  return account.passwordHash === await hashPassword(password)
+}
+
 export function getStoredSession() {
   const session = readJson<AuthSession>(localStorage, PERSISTENT_SESSION_KEY)
     ?? readJson<AuthSession>(sessionStorage, TEMPORARY_SESSION_KEY)
