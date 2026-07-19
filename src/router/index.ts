@@ -1,8 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { pinia } from '@/app/pinia'
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    { path: '/login', name: 'login', component: () => import('@/features/auth/LoginView.vue'), meta: { title: 'Ingresar', layout: 'auth', public: true, guestOnly: true } },
+    { path: '/crear-acceso', name: 'create-access', component: () => import('@/features/auth/CreateAccessView.vue'), meta: { title: 'Crear acceso', layout: 'auth', public: true, guestOnly: true } },
+    { path: '/recuperar-acceso', name: 'recover-access', component: () => import('@/features/auth/RecoverAccessView.vue'), meta: { title: 'Recuperar acceso', layout: 'auth', public: true, guestOnly: true } },
     { path: '/', name: 'dashboard', component: () => import('@/features/dashboard/DashboardView.vue'), meta: { title: 'Inicio' } },
     { path: '/calendario', name: 'calendar', component: () => import('@/features/calendar/CalendarView.vue'), meta: { title: 'Calendario' } },
     { path: '/tareas', name: 'tasks', component: () => import('@/features/tasks/TasksView.vue'), meta: { title: 'Tareas' } },
@@ -30,5 +35,25 @@ const router = createRouter({
   scrollBehavior: () => ({ top: 0 })
 })
 
-router.afterEach((to) => { document.title = `${String(to.meta.title ?? 'Vida Organizada')} · Vida Organizada` })
+router.beforeEach((to) => {
+  const auth = useAuthStore(pinia)
+  auth.restoreSession()
+
+  if (to.meta.public !== true && !auth.isAuthenticated) {
+    return {
+      path: auth.hasAccount ? '/login' : '/crear-acceso',
+      query: { redirect: to.fullPath }
+    }
+  }
+
+  if (to.meta.guestOnly === true && auth.isAuthenticated) return '/'
+  if (to.path === '/login' && !auth.hasAccount) return '/crear-acceso'
+  if (to.path === '/crear-acceso' && auth.hasAccount && !auth.isAuthenticated) return '/login'
+  return true
+})
+
+router.afterEach((to) => {
+  document.title = `${String(to.meta.title ?? 'Vida Organizada')} · Vida Organizada`
+})
+
 export default router
