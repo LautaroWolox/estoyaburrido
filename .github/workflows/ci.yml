@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install
+      - name: Build application
+        id: build
+        continue-on-error: true
+        run: npm run build > build.log 2>&1
+      - name: Upload build diagnostics
+        if: steps.build.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-diagnostics
+          path: build.log
+          retention-days: 3
+      - name: Report build result
+        run: |
+          cat build.log
+          if [ "${{ steps.build.outcome }}" = "failure" ]; then
+            exit 1
+          fi
